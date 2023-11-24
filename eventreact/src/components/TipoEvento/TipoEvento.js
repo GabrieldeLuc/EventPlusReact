@@ -5,7 +5,7 @@ import MainContent from "../MainContent/MainContent";
 import ImageIllustrator from "../../components/ImageIllustrator/ImageIllustrator";
 import api from "../../Services/Services";
 import Notification from "../Notification/Notification";
-import Spinner from "../../components/Spinner/Spinner"; 
+import Spinner from "../../components/Spinner/Spinner";
 import Container from "../../components/container/Container";
 import eventTypeImage from "../../assets/images/tipo-evento.svg";
 
@@ -14,31 +14,36 @@ import TableTp from "./TableTp/TableTp";
 
 const TipoEvento = () => {
   const [frmEdit, setFrmEdit] = useState(false);
-
   const [titulo, setTitulo] = useState("");
   const [idEvento, setIdEvento] = useState(null); // usar apenas para a edição
-
   const [notifyUser, setNotifyUser] = useState({});
-
   const [tipoEventos, setTipoEventos] = useState([]); // array mocado
+  const [showSpinner, setShowSpinner] = useState(false);
 
-  // Ao carregar a página 
+  // Ao carregar a página
   useEffect(() => {
     async function getTipoEventos() {
-      setShowSpinner(true); 
+      setShowSpinner(true);
       try {
         const retorno = await api.get("/TiposEvento"); // chama a rota de cadastro
         console.log(retorno);
         setTipoEventos(retorno.data);
       } catch (error) {
-        console.log(" Falha na Api");
-        // console.log(error);
+        setNotifyUser({
+          titleNote: "Falha na API",
+          textNote: `Não foi Possível entrar na Tela de Edição, Abra o seu Console para verificar o Erro`,
+          imgIcon: "danger",
+          imgAlt:
+            "Imagem de ilustração de sucesso. Moça segurando um balão com símbolo de confirmação ok.",
+          showMessage: true,
+        });
+        console.log(error);
       }
-      setShowSpinner(false); 
     }
 
     getTipoEventos();
-    console.log("Tipo Eventos Montada.");
+
+    setShowSpinner(false);
   }, []);
 
   async function handleSubmit(e) {
@@ -46,21 +51,30 @@ const TipoEvento = () => {
     e.preventDefault();
     //validar pelo menos 3 caracteres
     if (titulo.trim().length < 3) {
-      alert("O Título deve ter no mínimo 3 caracteres");
-      return;
-    }
-    //chamar a api
-    try {
       setNotifyUser({
-        titleNote: "Sucesso",
-        textNote: `Cadastrado com sucesso!`,
-        imgIcon: "success",
+        titleNote: "Nome do TipoEvento Inválido!!",
+        textNote: `O título deve ter pelo menos 3 Caracteres!`,
+        imgIcon: "warning",
         imgAlt:
           "Imagem de ilustração de sucesso. Moça segurando um balão com símbolo de confirmação ok.",
         showMessage: true,
       });
+      return; //retorna a função
+    }
+    //chamar a api
 
-      const retorno = await api.post("/TiposEvento", { titulo: titulo });
+    setNotifyUser({
+      titleNote: "Sucesso",
+      textNote: `Cadastrado com sucesso!`,
+      imgIcon: "success",
+      imgAlt:
+        "Imagem de ilustração de sucesso. Moça segurando um balão com símbolo de confirmação ok.",
+      showMessage: true,
+    });
+
+    // cadastrar no Banco
+    try {
+      const retorno = await api.post("/TiposEvento", { titulo: titulo }); // JSON
       const promiseGet = await api.get("/TiposEvento"); // Atualização da Página
       setTipoEventos(promiseGet.data);
       console.log(retorno.data);
@@ -76,12 +90,33 @@ const TipoEvento = () => {
   async function handleUpdate(e) {
     e.preventDefault();
 
-    try {
-      const retorno = await api.put("/TiposEvento/" + idEvento, {
-        titulo: titulo,
+    if (titulo.trim().length < 3) {
+      setNotifyUser({
+        titleNote: "Nome do TipoEvento Inválido !!",
+        textNote: `O título deve ter pelo menos  3 Caracteres!`,
+        imgIcon: "warning",
+        imgAlt:
+          "Imagem de ilustração de sucesso. Moça segurando um balão com símbolo de confirmação ok.",
+        showMessage: true,
       });
+      return;
+    }
+
+    try {
+      const retornoGet = await api.put(`/TiposEvento/${idEvento}`, { titulo });
+
+      editActionAbort();
+
+      setNotifyUser({
+        titleNote: "Sucesso",
+        textNote: `Atualizado com sucesso!`,
+        imgIcon: "success",
+        imgAlt:
+          "Imagem de ilustração de sucesso. Moça segurando um balão com símbolo de confirmação ok.",
+        showMessage: true,
+      });
+
       //atualizar o state (api get)
-      const retornoGet = await api.get("/TiposEvento");
       setTipoEventos(retornoGet.data); // atualiza o state da tabela
       alert("Atualizado com Sucesso !");
       //limpar o state do titulo e do idEvento
@@ -92,7 +127,7 @@ const TipoEvento = () => {
   }
 
   function editActionAbort() {
-    setIdEvento(null);
+    setIdEvento("");
     setFrmEdit(false);
     setTitulo("");
   }
@@ -105,11 +140,22 @@ const TipoEvento = () => {
       //fazer um get by id para pegar os dados
       const retorno = await api.get("/TiposEvento/" + idElemento);
 
+      const { idTipoEvento, titulo } = await retorno.data;
+
       //preenche o titulo e o id no state
       setTitulo(retorno.data.titulo);
       setIdEvento(retorno.data.idTipoEvento);
     } catch (error) {
-      alert("Não foi posssível mostrar a tela de edição. Tente novamente");
+      setNotifyUser({
+        titleNote: "Falha na API",
+        textNote: `Não foi possível entrar na Tela de Edição. Tente novamente`,
+        imgIcon: "danger",
+        imgAlt:
+          "Imagem de ilustração de sucesso. Moça segurando um balão com símbolo de confirmação ok.",
+        showMessage: true,
+      });
+
+      console.log(error);
     }
 
     //preencher o titulo no state
@@ -117,13 +163,26 @@ const TipoEvento = () => {
 
   async function handleDelete(idEvento) {
     try {
-      const retorno = await api.delete(`/TiposEvento/${idEvento}`);
+      const retornoGet = await api.delete(`/TiposEvento/${idEvento}`);
+
+      setNotifyUser({
+        titleNote: "Sucesso",
+        textNote: `Deletado com Sucesso!`,
+        imgIcon: "success",
+        imgAlt:
+          "Imagem de ilustração de sucesso. Moça segurando um balão com símbolo de confirmação ok.",
+        showMessage: true,
+      });
 
       alert("Registro apagado com sucesso");
-      const retornoGet = await api.get("/TiposEvento");
+
       setTipoEventos(retornoGet.data);
     } catch (error) {
       console.log("Falha ao Deletar");
+    }
+    async function getTipoEventos() {
+      const promisse = await api.get(`/TiposEvento/`);
+      getTipoEventos(promisse.data);
     }
   }
   async function handleSubmit(e) {
@@ -149,7 +208,7 @@ const TipoEvento = () => {
   return (
     <MainContent>
       <Notification {...notifyUser} setNotifyUser={setNotifyUser} />
-     { showSpinner ? <Spinner /> : null}
+      {showSpinner ? <Spinner /> : null}
 
       {/* Cadastro de Tipo Eventos */}
       <section className="cadastro-evento-section">

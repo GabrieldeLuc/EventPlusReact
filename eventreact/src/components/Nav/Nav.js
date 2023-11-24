@@ -14,7 +14,7 @@ const Nav = ({setexibeNavbar, exibeNavbar}) => {
       <img
         className="eventlogo__logo-image"
         src={window.innerWidth >= 992 ? logoDesktop : logoMobile}
-        alt
+        
       />
 
       <div className="navbar__items-box">
